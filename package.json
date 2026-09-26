@@ -1,0 +1,19 @@
+{
+  "name": "newsapp",
+  "version": "0.1.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.14.0",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.0",
+    "fast-xml-parser": "^4.5.0"
+  }
+}

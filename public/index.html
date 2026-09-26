@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Daily News</title>
+  <meta name="description" content="Today's top news in short cards. Swipe up for the next one.">
+  <meta name="theme-color" content="#0f1220">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1220; --card: #181c2f; --text: #eceffa; --muted: #98a1bb; --line: #2a3050;
+      --accent: #6ea8ff; --accent2: #9b7bff;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+
+    /* the reel: one card per screen, snapping as you scroll */
+    #reel { height: 100vh; height: 100dvh; overflow-y: scroll; scroll-snap-type: y mandatory; overscroll-behavior-y: contain;
+      scrollbar-width: none; outline: none; }
+    #reel::-webkit-scrollbar { display: none; }
+    .slide { height: 100vh; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always;
+      display: flex; justify-content: center; padding: 0; }
+
+    .card { position: relative; width: 100%; max-width: 520px; height: 100%; display: flex; flex-direction: column;
+      background: var(--card); overflow: hidden; }
+    @media (min-width: 560px) {
+      .slide { padding: 16px 0; }
+      .card { border-radius: 24px; border: 1px solid var(--line); box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+    }
+
+    .media { position: relative; flex: 0 0 46%; min-height: 0; background: var(--grad, linear-gradient(135deg, #2b3a8f, #6b3fc4)); }
+    .media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .media::after { content: ''; position: absolute; inset: auto 0 0 0; height: 40%;
+      background: linear-gradient(to top, var(--card), transparent); }
+    .media .glyph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 4rem; opacity: .55; }
+    .chip { position: absolute; z-index: 2; top: calc(env(safe-area-inset-top) + 14px); left: 14px; padding: 4px 12px;
+      border-radius: 999px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+      background: rgba(15,18,32,.72); backdrop-filter: blur(6px); }
+
+    .body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 20px calc(env(safe-area-inset-bottom) + 22px); }
+    .meta { color: var(--muted); font-size: .78rem; margin-bottom: 8px; }
+    h2 { margin: 0 0 12px; font-size: 1.32rem; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .gist { margin: 0; font-size: 1rem; line-height: 1.5; color: #d3d8ea; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .foot { margin-top: auto; padding-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .read { display: inline-block; padding: 11px 20px; border-radius: 999px; color: #0b1020; font-weight: 700; text-decoration: none;
+      font-size: .92rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .read:active { transform: scale(.97); }
+    .hint { color: var(--muted); font-size: .8rem; }
+
+    .pos { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: 14px; padding: 4px 12px; border-radius: 999px;
+      font-size: .75rem; font-weight: 700; background: rgba(15,18,32,.72); backdrop-filter: blur(6px); }
+    .pos[hidden] { display: none; }
+
+    .center { height: 100vh; height: 100dvh; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+    .center button { margin-top: 14px; padding: 10px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; color: #0b1020;
+      background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .spin { width: 34px; height: 34px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent);
+      animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } #reel { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <div id="pos" class="pos" hidden></div>
+  <div id="reel" tabindex="0" aria-label="News cards"></div>
+
+  <script>
+    const reel = document.getElementById('reel');
+    const pos = document.getElementById('pos');
+    const GRADS = [
+      'linear-gradient(135deg,#2b3a8f,#6b3fc4)', 'linear-gradient(135deg,#0f6d7a,#2a4fb8)', 'linear-gradient(135deg,#8a2c5e,#3f3fc4)',
+      'linear-gradient(135deg,#1f7a4a,#146a8a)', 'linear-gradient(135deg,#a4571c,#8a2c5e)',
+    ];
+    const GLYPH = { World: '🌍', India: '🇮🇳', Technology: '💻', Business: '📈', Science: '🔬' };
+
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+    function ago(iso) {
+      if (!iso) return '';
+      const m = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + ' min ago';
+      if (m < 1440) return Math.round(m / 60) + ' h ago';
+      return Math.round(m / 1440) + ' d ago';
+    }
+
+    function slide(item, i, total) {
+      const s = el('section', 'slide'); s.dataset.i = i;
+      const card = el('article', 'card');
+
+      const media = el('div', 'media'); media.style.setProperty('--grad', GRADS[i % GRADS.length]);
+      const glyph = el('div', 'glyph', GLYPH[item.category] || '📰');
+      media.append(glyph);
+      if (item.image) {
+        const img = el('img'); img.alt = ''; img.loading = i < 2 ? 'eager' : 'lazy'; img.referrerPolicy = 'no-referrer';
+        img.onload = () => glyph.remove(); // the photo replaces the placeholder
+        img.onerror = () => img.remove(); // no photo: keep the gradient and glyph
+        img.src = item.image;
+        media.prepend(img);
+      }
+      media.append(el('span', 'chip', item.category));
+
+      const body = el('div', 'body');
+      body.append(el('div', 'meta', [item.source, ago(item.publishedAt)].filter(Boolean).join(' · ')));
+      body.append(el('h2', '', item.title));
+      body.append(el('p', 'gist', item.gist));
+      const foot = el('div', 'foot');
+      const a = el('a', 'read', 'Read full story ↗'); a.href = item.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      foot.append(a, el('span', 'hint', i < total - 1 ? 'Swipe up ↑' : "You're all caught up"));
+      body.append(foot);
+
+      card.append(media, body); s.append(card);
+      return s;
+    }
+
+    function showMessage(text, { retry = false, spinner = false } = {}) {
+      reel.replaceChildren();
+      const c = el('div', 'center'); const box = el('div');
+      if (spinner) box.append(el('div', 'spin'));
+      box.append(el('p', '', text));
+      if (retry) { const b = el('button', '', 'Try again'); b.onclick = load; box.append(b); }
+      c.append(box); reel.append(c); pos.hidden = true;
+    }
+
+    let observer;
+    async function load() {
+      showMessage('Fetching today’s news…', { spinner: true });
+      try {
+        const res = await fetch('/api/news');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not load the news.');
+        if (!data.items || !data.items.length) throw new Error('No news today.');
+        reel.replaceChildren(...data.items.map((it, i) => slide(it, i, data.items.length)));
+        reel.scrollTop = 0;
+        pos.hidden = false; pos.textContent = `1 / ${data.items.length}`;
+        if (observer) observer.disconnect();
+        observer = new IntersectionObserver((entries) => {
+          for (const e of entries) if (e.isIntersecting) pos.textContent = `${Number(e.target.dataset.i) + 1} / ${data.items.length}`;
+        }, { root: reel, threshold: 0.6 });
+        reel.querySelectorAll('.slide').forEach((s) => observer.observe(s));
+        reel.focus({ preventScroll: true });
+      } catch (err) {
+        showMessage(err.message, { retry: true });
+      }
+    }
+
+    // keyboard: arrows / space / page keys move one card at a time on desktop
+    addEventListener('keydown', (e) => {
+      const step = { ArrowDown: 1, PageDown: 1, ' ': 1, ArrowUp: -1, PageUp: -1 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      reel.scrollBy({ top: step * reel.clientHeight, behavior: 'smooth' });
+    });
+
+    load();
+  </script>
+</body>
+</html>
