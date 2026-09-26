@@ -6,7 +6,13 @@
   <title>Daily News</title>
   <meta name="description" content="Today's top news in short cards. Swipe up for the next one.">
   <meta name="theme-color" content="#0f1220">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="News">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     :root {
       color-scheme: dark;
@@ -50,7 +56,7 @@
     .read:active { transform: scale(.97); }
     .hint { color: var(--muted); font-size: .8rem; }
 
-    .pos { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: 14px; padding: 4px 12px; border-radius: 999px;
+    .pos { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: 58px; padding: 4px 12px; border-radius: 999px;
       font-size: .75rem; font-weight: 700; background: rgba(15,18,32,.72); backdrop-filter: blur(6px); }
     .pos[hidden] { display: none; }
 
@@ -155,7 +161,9 @@
       reel.scrollBy({ top: step * reel.clientHeight, behavior: 'smooth' });
     });
 
+    window.pwaMenuItems = [{ label: '🔄 Reload news', onClick: load }];
     load();
   </script>
+  <script src="/install.js" defer></script>
 </body>
 </html>

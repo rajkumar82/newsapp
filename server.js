@@ -84,7 +84,12 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, file) {
+    // the service worker must always be re-checked, or installed copies of the app can get stuck on an old version
+    if (path.basename(file) === 'sw.js') res.set('Cache-Control', 'no-cache');
+  },
+}));
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`newsapp listening on ${PORT} (${BUCKET ? `bucket ${BUCKET}` : 'local ./data'})`));

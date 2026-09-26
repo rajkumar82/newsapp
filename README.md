@@ -18,6 +18,13 @@ Live: https://newsapp-185469394031.asia-south1.run.app
 
 To change the news sources, edit the `FEEDS` list at the top of `news.js`.
 
+## Install as an app
+
+The ⋮ menu (top-right) has "Install app": on Android Chrome it opens the install prompt; on iPhone Safari it shows
+the Share, then "Add to Home Screen" steps. It is a PWA (`manifest.webmanifest`, `sw.js`, `install.js`), so the
+installed app opens full-screen and shows the last loaded news when offline. Regenerate the icons with
+`python tools/make_icons.py`.
+
 ## Run locally
 
     npm install
