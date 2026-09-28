@@ -7,7 +7,7 @@ Live: https://newsapp-185469394031.asia-south1.run.app
 
 ## How it works
 
-- `GET /api/news` returns today's news (up to 20 items). "Today" is the date in IST.
+- `GET /api/news` returns today's news (every deduped item the feeds have). "Today" is the date in IST.
 - If `news-YYYY-MM-DD.json` already exists in storage it is served as is. Otherwise the server reads the RSS
   feeds in `news.js` (BBC World / Technology / Business / Science, The Hindu National; no API key needed),
   takes items round-robin so the cards mix topics, opens each article for its photo and opening paragraphs to

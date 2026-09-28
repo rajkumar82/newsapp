@@ -3,13 +3,12 @@ const { XMLParser } = require('fast-xml-parser');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 
-const MAX_ITEMS = 20;
 const GIST_MAX = 300; // chars, about 5 lines on a phone
 const GIST_MIN = 160;
 const FETCH_TIMEOUT_MS = 8000;
 const UA = 'Mozilla/5.0 (compatible; newsapp/0.1)';
 
-// One entry per feed; items are taken round-robin so the 20 cards mix topics and sources.
+// One entry per feed; items are taken round-robin so the cards mix topics and sources.
 const FEEDS = [
   { source: 'BBC News', category: 'World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
   { source: 'The Hindu', category: 'India', url: 'https://www.thehindu.com/news/national/feeder/default.rss' },
@@ -122,8 +121,8 @@ async function inBatches(list, size, fn) {
   return out;
 }
 
-// Round-robin across feeds, skipping duplicate links/titles, up to `limit` items.
-function pick(lists, limit) {
+// Round-robin across feeds, skipping duplicate links/titles, up to `limit` items (default: all of them).
+function pick(lists, limit = Infinity) {
   const seen = new Set();
   const out = [];
   for (let i = 0; out.length < limit && lists.some((l) => i < l.length); i++) {
@@ -141,7 +140,7 @@ function pick(lists, limit) {
   return out;
 }
 
-async function fetchTodaysNews(limit = MAX_ITEMS) {
+async function fetchTodaysNews(limit = Infinity) {
   const lists = (await Promise.all(FEEDS.map(async (feed) => {
     try {
       return parseFeed(await get(feed.url), feed);
@@ -155,4 +154,4 @@ async function fetchTodaysNews(limit = MAX_ITEMS) {
   return inBatches(chosen, 5, enrich);
 }
 
-module.exports = { fetchTodaysNews, stripTracking, buildGist, trimToSentence, parseFeed, pick, MAX_ITEMS, GIST_MAX };
+module.exports = { fetchTodaysNews, stripTracking, buildGist, trimToSentence, parseFeed, pick, GIST_MAX };

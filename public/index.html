@@ -56,10 +56,6 @@
     .read:active { transform: scale(.97); }
     .hint { color: var(--muted); font-size: .8rem; }
 
-    .pos { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top) + 14px); right: 58px; padding: 4px 12px; border-radius: 999px;
-      font-size: .75rem; font-weight: 700; background: rgba(15,18,32,.72); backdrop-filter: blur(6px); }
-    .pos[hidden] { display: none; }
-
     .center { height: 100vh; height: 100dvh; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
     .center button { margin-top: 14px; padding: 10px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; color: #0b1020;
       background: linear-gradient(135deg, var(--accent), var(--accent2)); }
@@ -70,12 +66,10 @@
   </style>
 </head>
 <body>
-  <div id="pos" class="pos" hidden></div>
   <div id="reel" tabindex="0" aria-label="News cards"></div>
 
   <script>
     const reel = document.getElementById('reel');
-    const pos = document.getElementById('pos');
     const GRADS = [
       'linear-gradient(135deg,#2b3a8f,#6b3fc4)', 'linear-gradient(135deg,#0f6d7a,#2a4fb8)', 'linear-gradient(135deg,#8a2c5e,#3f3fc4)',
       'linear-gradient(135deg,#1f7a4a,#146a8a)', 'linear-gradient(135deg,#a4571c,#8a2c5e)',
@@ -128,10 +122,9 @@
       if (spinner) box.append(el('div', 'spin'));
       box.append(el('p', '', text));
       if (retry) { const b = el('button', '', 'Try again'); b.onclick = load; box.append(b); }
-      c.append(box); reel.append(c); pos.hidden = true;
+      c.append(box); reel.append(c);
     }
 
-    let observer;
     async function load() {
       showMessage('Fetching today’s news…', { spinner: true });
       try {
@@ -141,12 +134,6 @@
         if (!data.items || !data.items.length) throw new Error('No news today.');
         reel.replaceChildren(...data.items.map((it, i) => slide(it, i, data.items.length)));
         reel.scrollTop = 0;
-        pos.hidden = false; pos.textContent = `1 / ${data.items.length}`;
-        if (observer) observer.disconnect();
-        observer = new IntersectionObserver((entries) => {
-          for (const e of entries) if (e.isIntersecting) pos.textContent = `${Number(e.target.dataset.i) + 1} / ${data.items.length}`;
-        }, { root: reel, threshold: 0.6 });
-        reel.querySelectorAll('.slide').forEach((s) => observer.observe(s));
         reel.focus({ preventScroll: true });
       } catch (err) {
         showMessage(err.message, { retry: true });
