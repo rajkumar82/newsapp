@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>News Tags</title>
+  <meta name="description" content="Choose which news topics show up in your feed.">
+  <meta name="theme-color" content="#0f1220">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="News">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1220; --card: #181c2f; --text: #eceffa; --muted: #98a1bb; --line: #2a3050;
+      --accent: #6ea8ff; --accent2: #9b7bff;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+
+    .wrap { max-width: 520px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 24px); }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .back { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--card);
+      color: var(--text); font-size: 1.1rem; display: grid; place-items: center; text-decoration: none; }
+    h1 { margin: 0; font-size: 1.2rem; }
+    p.sub { margin: 0 0 18px; color: var(--muted); font-size: .88rem; }
+
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 4px;
+      border-bottom: 1px solid var(--line); cursor: pointer; }
+    .row-label { display: flex; align-items: center; gap: 10px; font-size: 1rem; }
+    .row-glyph { font-size: 1.25rem; width: 1.4em; text-align: center; }
+
+    .switch { position: relative; width: 46px; height: 26px; flex: none; }
+    .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+    .switch .track { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background .15s; }
+    .switch .thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+    .switch input:checked + .track { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .switch input:checked ~ .thumb { transform: translateX(20px); }
+    .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .note { margin-top: 18px; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="/" aria-label="Back to news">←</a>
+      <h1>News tags</h1>
+    </header>
+    <p class="sub">Turn off topics you don't want to see. This is saved on this device only.</p>
+    <div id="list"></div>
+    <p class="note" id="note" hidden>All tags are off, so no stories can show. Turn at least one back on.</p>
+  </div>
+
+  <script>
+    const CATEGORIES = [
+      ['World', '🌍'], ['India', '🇮🇳'], ['Singapore', '🇸🇬'], ['Technology', '💻'], ['AI', '🤖'], ['Gadgets', '📱'],
+      ['Business', '📈'], ['Science', '🔬'], ['Entertainment', '🎬'], ['Health', '🏥'], ['Politics', '🏛️'],
+      ['Basketball', '🏀'], ['Football', '⚽'], ['Cricket', '🏏'],
+    ];
+    const TAGS_KEY = 'newsapp:tags';
+
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+    function loadPrefs() {
+      try { return JSON.parse(localStorage.getItem(TAGS_KEY)) || {}; } catch { return {}; }
+    }
+    function savePrefs(prefs) {
+      try { localStorage.setItem(TAGS_KEY, JSON.stringify(prefs)); } catch {}
+    }
+
+    const prefs = loadPrefs();
+    const list = document.getElementById('list');
+    const note = document.getElementById('note');
+
+    function updateNote() {
+      note.hidden = CATEGORIES.some(([name]) => prefs[name] !== false);
+    }
+
+    for (const [name, glyph] of CATEGORIES) {
+      const row = el('label', 'row');
+      const label = el('span', 'row-label');
+      label.append(el('span', 'row-glyph', glyph), document.createTextNode(name));
+      const input = el('input'); input.type = 'checkbox'; input.checked = prefs[name] !== false;
+      input.addEventListener('change', () => {
+        prefs[name] = input.checked;
+        savePrefs(prefs);
+        updateNote();
+      });
+      const sw = el('span', 'switch');
+      sw.append(input, el('span', 'track'), el('span', 'thumb'));
+      row.append(label, sw);
+      list.append(row);
+    }
+    updateNote();
+  </script>
+  <script src="/install.js" defer></script>
+</body>
+</html>

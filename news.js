@@ -12,9 +12,23 @@ const UA = 'Mozilla/5.0 (compatible; newsapp/0.1)';
 const FEEDS = [
   { source: 'BBC News', category: 'World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
   { source: 'The Hindu', category: 'India', url: 'https://www.thehindu.com/news/national/feeder/default.rss' },
+  { source: 'Times of India', category: 'India', url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms' },
+  { source: 'NDTV', category: 'India', url: 'https://feeds.feedburner.com/ndtvnews-india-news' },
+  { source: 'The Straits Times', category: 'Singapore', url: 'https://www.straitstimes.com/news/singapore/rss.xml' },
   { source: 'BBC News', category: 'Technology', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml' },
+  { source: 'TechCrunch', category: 'Technology', url: 'https://techcrunch.com/feed/' },
+  { source: 'Ars Technica', category: 'Technology', url: 'https://feeds.arstechnica.com/arstechnica/index' },
+  { source: 'WIRED', category: 'Technology', url: 'https://www.wired.com/feed/rss' },
+  { source: 'TechCrunch', category: 'AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
+  { source: 'TechCrunch', category: 'Gadgets', url: 'https://techcrunch.com/category/gadgets/feed/' },
   { source: 'BBC News', category: 'Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml' },
   { source: 'BBC News', category: 'Science', url: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml' },
+  { source: 'BBC News', category: 'Entertainment', url: 'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml' },
+  { source: 'BBC News', category: 'Health', url: 'https://feeds.bbci.co.uk/news/health/rss.xml' },
+  { source: 'BBC News', category: 'Politics', url: 'https://feeds.bbci.co.uk/news/politics/rss.xml' },
+  { source: 'CBS Sports', category: 'Basketball', url: 'https://www.cbssports.com/rss/headlines/nba/' },
+  { source: 'CBS Sports', category: 'Football', url: 'https://www.cbssports.com/rss/headlines/soccer/' },
+  { source: 'NDTV', category: 'Cricket', url: 'https://feeds.feedburner.com/ndtvsports-cricket' },
 ];
 
 const BOILERPLATE = /subscribed with another email|sign up|newsletter|copyright|all rights reserved|read more|follow us|download the/i;

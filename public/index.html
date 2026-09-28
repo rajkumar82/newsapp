@@ -44,7 +44,7 @@
     .media .glyph { position: absolute; inset: 0; display: grid; place-items: center; font-size: 4rem; opacity: .55; }
     .chip { position: absolute; z-index: 2; top: calc(env(safe-area-inset-top) + 14px); left: 14px; padding: 4px 12px;
       border-radius: 999px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-      background: rgba(15,18,32,.72); backdrop-filter: blur(6px); }
+      background: rgba(15,18,32,.72); backdrop-filter: blur(6px); color: inherit; text-decoration: none; cursor: pointer; }
 
     .body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 20px calc(env(safe-area-inset-bottom) + 22px); }
     .meta { color: var(--muted); font-size: .78rem; margin-bottom: 8px; }
@@ -59,6 +59,8 @@
     .center { height: 100vh; height: 100dvh; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
     .center button { margin-top: 14px; padding: 10px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; color: #0b1020;
       background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .center a { display: inline-block; margin-top: 14px; padding: 10px 22px; border-radius: 999px; font-weight: 700; color: #0b1020;
+      text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
     .spin { width: 34px; height: 34px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent);
       animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -74,7 +76,11 @@
       'linear-gradient(135deg,#2b3a8f,#6b3fc4)', 'linear-gradient(135deg,#0f6d7a,#2a4fb8)', 'linear-gradient(135deg,#8a2c5e,#3f3fc4)',
       'linear-gradient(135deg,#1f7a4a,#146a8a)', 'linear-gradient(135deg,#a4571c,#8a2c5e)',
     ];
-    const GLYPH = { World: '🌍', India: '🇮🇳', Technology: '💻', Business: '📈', Science: '🔬' };
+    const GLYPH = {
+      World: '🌍', India: '🇮🇳', Singapore: '🇸🇬', Technology: '💻', AI: '🤖', Gadgets: '📱',
+      Business: '📈', Science: '🔬', Entertainment: '🎬', Health: '🏥', Politics: '🏛️',
+      Basketball: '🏀', Football: '⚽', Cricket: '🏏',
+    };
 
     const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -101,7 +107,8 @@
         img.src = item.image;
         media.prepend(img);
       }
-      media.append(el('span', 'chip', item.category));
+      const chip = el('a', 'chip', item.category); chip.href = '/tags.html'; chip.setAttribute('aria-label', `Category: ${item.category}. Tap to manage tags.`);
+      media.append(chip);
 
       const body = el('div', 'body');
       body.append(el('div', 'meta', [item.source, ago(item.publishedAt)].filter(Boolean).join(' · ')));
@@ -116,13 +123,20 @@
       return s;
     }
 
-    function showMessage(text, { retry = false, spinner = false } = {}) {
+    function showMessage(text, { retry = false, spinner = false, manageTags = false } = {}) {
       reel.replaceChildren();
       const c = el('div', 'center'); const box = el('div');
       if (spinner) box.append(el('div', 'spin'));
       box.append(el('p', '', text));
       if (retry) { const b = el('button', '', 'Try again'); b.onclick = load; box.append(b); }
+      if (manageTags) { const a = el('a', '', 'Manage tags'); a.href = '/tags.html'; box.append(a); }
       c.append(box); reel.append(c);
+    }
+
+    // per-category on/off preferences set on the tags page; missing means "show everything"
+    const TAGS_KEY = 'newsapp:tags';
+    function loadTagPrefs() {
+      try { return JSON.parse(localStorage.getItem(TAGS_KEY)); } catch { return null; }
     }
 
     // remembers the last-viewed card for today only; a new day's data starts back at the top
@@ -142,7 +156,10 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Could not load the news.');
         if (!data.items || !data.items.length) throw new Error('No news today.');
-        reel.replaceChildren(...data.items.map((it, i) => slide(it, i, data.items.length)));
+        const prefs = loadTagPrefs();
+        const items = prefs ? data.items.filter((it) => prefs[it.category] !== false) : data.items;
+        if (!items.length) { showMessage('No stories match your selected tags right now.', { manageTags: true }); return; }
+        reel.replaceChildren(...items.map((it, i) => slide(it, i, items.length)));
 
         const slides = reel.querySelectorAll('.slide');
         const saved = loadProgress();
