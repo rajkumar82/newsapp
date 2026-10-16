@@ -2,6 +2,7 @@
 const { XMLParser } = require('fast-xml-parser');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const { decodeHTML } = require('entities');
 
 const GIST_MAX = 300; // chars, about 5 lines on a phone
 const GIST_MIN = 160;
@@ -44,6 +45,8 @@ async function get(url) {
 }
 
 const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+// Some feeds double-encode (the XML parser leaves "&#8217;" behind), so titles are decoded once more. Keeps stored days fixable too.
+const decodeText = (s) => decodeHTML(String(s || ''));
 
 // drops ?at_medium=RSS style tracking parameters so links are clean and the same story dedupes
 function stripTracking(link) {
@@ -64,7 +67,7 @@ function parseFeed(xml, feed) {
     const media = it['media:thumbnail'] || it['media:content'];
     const m = Array.isArray(media) ? media[0] : media;
     return {
-      title: clean(it.title),
+      title: clean(decodeText(it.title)),
       link: stripTracking(clean(typeof it.link === 'string' ? it.link : it.link?.['#text'])),
       summary: clean(cheerio.load(`<p>${it.description || ''}</p>`).text()),
       publishedAt: it.pubDate ? new Date(it.pubDate).toISOString() : null,
@@ -168,4 +171,4 @@ async function fetchTodaysNews(limit = Infinity) {
   return inBatches(chosen, 5, enrich);
 }
 
-module.exports = { fetchTodaysNews, stripTracking, buildGist, trimToSentence, parseFeed, pick, GIST_MAX };
+module.exports = { decodeText, fetchTodaysNews, stripTracking, buildGist, trimToSentence, parseFeed, pick, GIST_MAX };

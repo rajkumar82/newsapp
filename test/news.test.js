@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { buildGist, trimToSentence, parseFeed, pick, stripTracking, GIST_MAX } = require('../news');
+const { decodeText, buildGist, trimToSentence, parseFeed, pick, stripTracking, GIST_MAX } = require('../news');
 
 test('trimToSentence ends on a sentence boundary when one fits', () => {
   const text = `${'A'.repeat(200)}. ${'B'.repeat(200)}. tail`;
@@ -40,4 +40,9 @@ test('pick interleaves feeds, drops duplicates and respects the limit', () => {
   const mk = (t, l) => ({ title: t, link: l });
   const out = pick([[mk('a', 'u1'), mk('b', 'u2')], [mk('c', 'u3'), mk('A', 'u9'), mk('d', 'u4')]], 4);
   assert.deepStrictEqual(out.map((i) => i.title), ['a', 'c', 'b', 'd']);
+});
+
+test('decodeText turns leftover HTML entities in titles into real characters', () => {
+  assert.strictEqual(decodeText('Cal AI&#8217;s &amp; co &quot;x&quot;'), 'Cal AI’s & co "x"');
+  assert.strictEqual(decodeText('Plain title'), 'Plain title');
 });

@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fsp = require('fs/promises');
-const { fetchTodaysNews } = require('./news');
+const { fetchTodaysNews, decodeText } = require('./news');
 
 const PORT = process.env.PORT || 8080;
 const BUCKET = process.env.BUCKET; // if unset, the daily JSON is stored in ./data
@@ -76,11 +76,32 @@ app.disable('x-powered-by');
 app.get('/api/news', async (req, res) => {
   try {
     res.set('Cache-Control', 'public, max-age=300');
-    res.json(await newsForDay(todayKey()));
+    // days saved before titles were decoded can still hold "&#8217;" style text, so clean it on the way out
+    const doc = await newsForDay(todayKey());
+    res.json({ ...doc, items: doc.items.map((it) => ({ ...it, title: decodeText(it.title), gist: decodeText(it.gist) })) });
   } catch (err) {
     console.error('news failed:', err);
     res.set('Cache-Control', 'no-store');
     res.status(503).json({ error: 'Could not load the news right now. Please try again in a minute.' });
+  }
+});
+
+// Same-origin copy of a story photo so the browser can draw it onto a canvas for the share image.
+// Only photos that belong to today's news are served, so this can't be used as an open proxy.
+app.get('/api/img', async (req, res) => {
+  try {
+    const url = String(req.query.url || '');
+    const doc = await newsForDay(todayKey());
+    if (!url || !doc.items.some((it) => it.image === url)) return res.status(404).end();
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const type = r.headers.get('content-type') || '';
+    if (!r.ok || !type.startsWith('image/')) return res.status(404).end();
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 8 * 1024 * 1024) return res.status(404).end();
+    res.set({ 'Content-Type': type, 'Cache-Control': 'public, max-age=86400' });
+    res.send(buf);
+  } catch (err) {
+    res.status(404).end();
   }
 });
 

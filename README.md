@@ -30,6 +30,14 @@ device only, so cards for a turned-off tag simply don't appear in the reel; ther
 filtering. The tag list on that page (`CATEGORIES` in `public/tags.html`) and the icons (`GLYPH` in
 `public/index.html`) must be kept in sync by hand with the categories used in `news.js`.
 
+## Sharing a card
+
+Each card has two icon buttons: open the full story (↗) and share. Share draws the card (photo, headline, gist)
+onto a canvas as a PNG and hands it, with the headline and article link as text, to the phone's share sheet
+(`navigator.share`), so WhatsApp gets the picture plus the link. Where file sharing isn't supported it shares just
+the text, or opens `wa.me` on desktop. The photo is loaded through `GET /api/img?url=...`, a same-origin proxy that
+only serves photos belonging to today's news (otherwise the cross-origin image would taint the canvas).
+
 ## Install as an app
 
 The ⋮ menu (top-right) has "Install app": on Android Chrome it opens the install prompt; on iPhone Safari it shows
