@@ -48,8 +48,9 @@
 
     .body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 20px calc(env(safe-area-inset-bottom) + 90px); }
     .meta { color: var(--muted); font-size: .78rem; margin-bottom: 8px; }
+    .meta a { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
     h2 { margin: 0 0 12px; font-size: 1.32rem; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-    .gist { margin: 0; font-size: 1rem; line-height: 1.5; color: #d3d8ea; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .gist { margin: 0; font-size: 1rem; line-height: 1.5; color: #d3d8ea; display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
     /* one shared action bar that stays put while the cards slide underneath it */
     #bar { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 520px; z-index: 5;
       display: none; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none;
@@ -126,7 +127,14 @@
       media.append(chip);
 
       const body = el('div', 'body');
-      body.append(el('div', 'meta', [item.source, ago(item.publishedAt)].filter(Boolean).join(' · ')));
+      const meta = el('div', 'meta');
+      if (item.source) {
+        const src = el('a', '', item.source); src.href = '/sources.html'; src.setAttribute('aria-label', `Source: ${item.source}. Tap to manage sources.`);
+        meta.append(src);
+      }
+      const when = ago(item.publishedAt);
+      if (when) meta.append(document.createTextNode((item.source ? ' · ' : '') + when));
+      body.append(meta);
       body.append(el('h2', '', item.title));
       body.append(el('p', 'gist', item.gist));
       card.append(media, body); s.append(card);
@@ -222,23 +230,27 @@
       if (spinner) box.append(el('div', 'spin'));
       box.append(el('p', '', text));
       if (retry) { const b = el('button', '', 'Try again'); b.onclick = load; box.append(b); }
-      if (manageTags) { const a = el('a', '', 'Manage tags'); a.href = '/tags.html'; box.append(a); }
+      if (manageTags) {
+        const a = el('a', '', 'Manage tags'); a.href = '/tags.html'; box.append(a);
+        const b = el('a', '', 'Manage sources'); b.href = '/sources.html'; b.style.marginLeft = '8px'; box.append(b);
+      }
       c.append(box); reel.append(c);
     }
 
-    // per-category on/off preferences set on the tags page; missing means "show everything"
-    const TAGS_KEY = 'newsapp:tags';
-    function loadTagPrefs() {
-      try { return JSON.parse(localStorage.getItem(TAGS_KEY)); } catch { return null; }
+    // per-category and per-source on/off preferences set on the tags / sources pages; missing means "show everything"
+    const TAGS_KEY = 'newsapp:tags', SOURCES_KEY = 'newsapp:sources';
+    function loadPrefs(key) {
+      try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
     }
+    const prefsSignature = () => `${localStorage.getItem(TAGS_KEY)}|${localStorage.getItem(SOURCES_KEY)}`;
 
-    // remembers the last-viewed card for today only; a new day's data starts back at the top
+    // remembers the last-viewed card for today only (by story id, since the list changes with the filters)
     const PROGRESS_KEY = 'newsapp:progress';
     function loadProgress() {
       try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)); } catch { return null; }
     }
-    function saveProgress(date, index) {
-      try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ date, index })); } catch {}
+    function saveProgress(date, id) {
+      try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ date, id })); } catch {}
     }
 
     const bar = document.getElementById('bar'), openBtn = document.getElementById('openBtn'),
@@ -251,36 +263,52 @@
     }
     shareBtn.onclick = () => shown[current] && shareCard(shown[current], current, shareBtn);
 
-    let observer;
+    // the fetched day stays in memory so changing tags or sources only re-filters; no refetch
+    let observer, data = null, renderedSig = null;
+    function render(keepId) {
+      const tags = loadPrefs(TAGS_KEY), sources = loadPrefs(SOURCES_KEY);
+      renderedSig = prefsSignature();
+      const items = data.items.filter((it) => !(tags && tags[it.category] === false) && !(sources && sources[it.source] === false));
+      if (!items.length) { shown = []; showMessage('No stories match your selected tags and sources right now.', { manageTags: true }); return; }
+      reel.replaceChildren(...items.map((it, i) => slide(it, i, items.length)));
+      shown = items; bar.style.display = 'flex';
+
+      const slides = reel.querySelectorAll('.slide');
+      const saved = loadProgress();
+      const wantId = keepId || (saved && saved.date === data.date && saved.id);
+      const start = Math.max(0, items.findIndex((it) => it.id === wantId)); // not in the list any more: back to the top
+      reel.scrollTop = slides[start].offsetTop; setCurrent(start);
+
+      if (observer) observer.disconnect();
+      observer = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { const n = Number(e.target.dataset.i); setCurrent(n); saveProgress(data.date, items[n].id); }
+      }, { root: reel, threshold: 0.6 });
+      slides.forEach((s) => observer.observe(s));
+
+      reel.focus({ preventScroll: true });
+    }
+
     async function load() {
       showMessage('Fetching today’s news…', { spinner: true });
       try {
         const res = await fetch('/api/news');
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Could not load the news.');
-        if (!data.items || !data.items.length) throw new Error('No news today.');
-        const prefs = loadTagPrefs();
-        const items = prefs ? data.items.filter((it) => prefs[it.category] !== false) : data.items;
-        if (!items.length) { showMessage('No stories match your selected tags right now.', { manageTags: true }); return; }
-        reel.replaceChildren(...items.map((it, i) => slide(it, i, items.length)));
-        shown = items; bar.style.display = 'flex';
-
-        const slides = reel.querySelectorAll('.slide');
-        const saved = loadProgress();
-        const start = saved && saved.date === data.date && saved.index > 0 && saved.index < slides.length ? saved.index : 0;
-        reel.scrollTop = slides[start].offsetTop; setCurrent(start);
-
-        if (observer) observer.disconnect();
-        observer = new IntersectionObserver((entries) => {
-          for (const e of entries) if (e.isIntersecting) { const n = Number(e.target.dataset.i); setCurrent(n); saveProgress(data.date, n); }
-        }, { root: reel, threshold: 0.6 });
-        slides.forEach((s) => observer.observe(s));
-
-        reel.focus({ preventScroll: true });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || 'Could not load the news.');
+        if (!body.items || !body.items.length) throw new Error('No news today.');
+        data = body;
+        render();
       } catch (err) {
         showMessage(err.message, { retry: true });
       }
     }
+
+    // coming back from the tags / sources pages (also via the browser's back button, which can restore this page as it was)
+    function applyPrefChanges() {
+      try { if (data && prefsSignature() !== renderedSig) render(shown[current] && shown[current].id); } catch {}
+    }
+    addEventListener('pageshow', applyPrefChanges);
+    addEventListener('storage', applyPrefChanges);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) applyPrefChanges(); });
 
     // keyboard: arrows / space / page keys move one card at a time on desktop
     addEventListener('keydown', (e) => {

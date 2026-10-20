@@ -3,8 +3,8 @@ const assert = require('node:assert');
 const { decodeText, buildGist, trimToSentence, parseFeed, pick, stripTracking, GIST_MAX } = require('../news');
 
 test('trimToSentence ends on a sentence boundary when one fits', () => {
-  const text = `${'A'.repeat(200)}. ${'B'.repeat(200)}. tail`;
-  assert.strictEqual(trimToSentence(text, GIST_MAX), `${'A'.repeat(200)}.`);
+  const text = `${'A'.repeat(300)}. ${'B'.repeat(300)}. tail`;
+  assert.strictEqual(trimToSentence(text, GIST_MAX), `${'A'.repeat(300)}.`);
 });
 
 test('trimToSentence adds an ellipsis when there is no boundary', () => {
@@ -14,7 +14,7 @@ test('trimToSentence adds an ellipsis when there is no boundary', () => {
 
 test('buildGist tops up a short lead from paragraphs and skips repeats of the lead', () => {
   const lead = 'Short lead sentence about the event.';
-  const paras = [`${lead} and more`, 'A second paragraph with plenty of extra detail, long enough on its own that together with the lead it reaches the minimum size of the gist text.', 'never used'];
+  const paras = [`${lead} and more`, 'A second paragraph with plenty of extra detail, long enough on its own that together with the lead it reaches the minimum size of the gist text, which is why this test paragraph keeps going with a few more words of filler to be safe.', 'never used'];
   const gist = buildGist(lead, paras);
   assert.ok(gist.startsWith(lead));
   assert.ok(gist.includes('second paragraph'));
