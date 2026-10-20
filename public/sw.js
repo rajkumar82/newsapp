@@ -1,7 +1,7 @@
 // Minimal service worker: makes the app installable and lets it open offline.
-// App shell = cache-first (refreshed in the background); API/data requests = network-first with cache fallback.
+// Pages and code = network-first (a new deploy shows up on the next open), saved copy only when offline; API/data requests = network-first too.
 // Bump CACHE when the shell files change in a way that must not be served stale.
-const CACHE = 'app-v8';
+const CACHE = 'app-v9';
 const SHELL = ['/', '/tags.html', '/sources.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/install.js'];
 
 self.addEventListener('install', (e) => {
@@ -30,13 +30,11 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
+  // Pages and code: network first, so a new deploy shows up on the very next open. The saved copy is only the offline fallback.
   e.respondWith(
-    caches.match(req).then((hit) => {
-      const refresh = fetch(req).then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
-        return res;
-      });
-      return hit || refresh;
-    }).catch(() => caches.match('/')),
+    fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+      return res;
+    }).catch(() => caches.match(req).then((hit) => hit || caches.match('/'))),
   );
 });
