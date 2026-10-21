@@ -3,8 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Daily News</title>
-  <meta name="description" content="Today's top news in short cards. Swipe up for the next one.">
+  <title>Daily News – Today's Top Headlines as Short Swipeable Cards | nocod.dev</title>
+  <!-- seo:start -->
+  <meta name="description" content="Today's top news in short cards you swipe like reels. A quick daily news digest that works as an app on your phone.">
+  <link rel="canonical" href="https://dailynews.nocod.dev/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="nocod.dev">
+  <meta property="og:title" content="Daily News – Today's Top Headlines as Short Swipeable Cards | nocod.dev">
+  <meta property="og:description" content="Today's top news in short cards you swipe like reels. A quick daily news digest that works as an app on your phone.">
+  <meta property="og:url" content="https://dailynews.nocod.dev/">
+  <meta property="og:image" content="https://dailynews.nocod.dev/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Daily News – Today's Top Headlines as Short Swipeable Cards | nocod.dev">
+  <meta name="twitter:description" content="Today's top news in short cards you swipe like reels. A quick daily news digest that works as an app on your phone.">
+  <meta name="twitter:image" content="https://dailynews.nocod.dev/og-image.png">
+  <!-- seo:end -->
   <meta name="theme-color" content="#0f1220">
   <link rel="icon" type="image/png" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -74,9 +89,12 @@
       animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } #reel { scroll-behavior: auto; } }
+  
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   </style>
 </head>
 <body>
+  <h1 class="sr-only">Daily News: today's top headlines as short cards</h1>
   <div id="reel" tabindex="0" aria-label="News cards"></div>
   <div id="bar">
     <div class="actions">
@@ -276,7 +294,16 @@
       const slides = reel.querySelectorAll('.slide');
       const saved = loadProgress();
       const wantId = keepId || (saved && saved.date === data.date && saved.id);
-      const start = Math.max(0, items.findIndex((it) => it.id === wantId)); // not in the list any more: back to the top
+      // if that story was filtered out, stay at its place in the day's order: the next story that is still shown, else the previous one
+      let start = items.findIndex((it) => it.id === wantId);
+      if (start < 0) {
+        const kept = new Set(items.map((it) => it.id));
+        const at = data.items.findIndex((it) => it.id === wantId);
+        const after = at < 0 ? null : data.items.slice(at).find((it) => kept.has(it.id));
+        const before = at < 0 ? null : data.items.slice(0, at).reverse().find((it) => kept.has(it.id));
+        const near = after || before;
+        start = near ? items.indexOf(near) : 0;
+      }
       reel.scrollTop = slides[start].offsetTop; setCurrent(start);
 
       if (observer) observer.disconnect();
