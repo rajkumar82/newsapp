@@ -21,13 +21,14 @@
   <meta name="twitter:image" content="https://dailynews.nocod.dev/og-image.png">
   <!-- seo:end -->
   <meta name="theme-color" content="#0f1220">
-  <link rel="icon" type="image/png" href="icon-192.png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="News">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/brand.css">
   <style>
     :root {
       color-scheme: dark;
@@ -74,17 +75,17 @@
     @media (min-width: 560px) { #bar { padding-bottom: 38px; } }
     .actions { display: flex; gap: 10px; }
     .ibtn { width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
-      color: #0b1020; background: linear-gradient(135deg, var(--accent), var(--accent2)); text-decoration: none; }
+      color: #fff; background: var(--grad); text-decoration: none; }
     .ibtn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .ibtn:active { transform: scale(.94); }
     .ibtn[disabled] { opacity: .5; }
     .hint { color: var(--muted); font-size: .8rem; }
 
     .center { height: 100vh; height: 100dvh; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
-    .center button { margin-top: 14px; padding: 10px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; color: #0b1020;
-      background: linear-gradient(135deg, var(--accent), var(--accent2)); }
-    .center a { display: inline-block; margin-top: 14px; padding: 10px 22px; border-radius: 999px; font-weight: 700; color: #0b1020;
-      text-decoration: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .center button { margin-top: 14px; padding: 10px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; color: #fff;
+      background: var(--grad); }
+    .center a { display: inline-block; margin-top: 14px; padding: 10px 22px; border-radius: 999px; font-weight: 700; color: #fff;
+      text-decoration: none; background: var(--grad); }
     .spin { width: 34px; height: 34px; margin: 0 auto 14px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent);
       animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -228,7 +229,7 @@
     }
 
     async function shareCard(item, i, btn) {
-      const text = `${item.title}\n${item.url}`;
+      const text = `${item.title}\n\nRead more and try out the Daily News app: ${location.origin}/n/${item.code}`;
       const fallback = () => open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
       btn.disabled = true;
       try {
@@ -279,7 +280,8 @@
       current = i; openBtn.href = shown[i].url;
       hint.textContent = i < shown.length - 1 ? 'Swipe up ↑' : "You're all caught up";
     }
-    shareBtn.onclick = () => shown[current] && shareCard(shown[current], current, shareBtn);
+    shareBtn.onclick = () => { if (window.pingCount) pingCount("share"); if (shown[current]) shareCard(shown[current], current, shareBtn); };
+    openBtn.addEventListener("click", () => { if (window.pingCount) pingCount("open-story"); });
 
     // the fetched day stays in memory so changing tags or sources only re-filters; no refetch
     let observer, data = null, renderedSig = null;
@@ -315,6 +317,21 @@
       reel.focus({ preventScroll: true });
     }
 
+    // opened from a shared link (/n/<code>): make sure that story is in the list (it may be from an earlier day) and start on it
+    const sharedCode = (location.pathname.match(/^\/n\/([0-9a-z]+)$/) || [])[1];
+    let sharedId = null;
+    async function addSharedStory() {
+      if (!sharedCode || sharedId) return;
+      const here = data.items.find((it) => it.code === sharedCode);
+      if (here) { sharedId = here.id; return; }
+      try {
+        const res = await fetch('/api/story/' + sharedCode);
+        if (!res.ok) return;
+        const { item } = await res.json();
+        data.items.unshift(item); sharedId = item.id;
+      } catch {}
+    }
+
     async function load() {
       showMessage('Fetching today’s news…', { spinner: true });
       try {
@@ -323,7 +340,8 @@
         if (!res.ok) throw new Error(body.error || 'Could not load the news.');
         if (!body.items || !body.items.length) throw new Error('No news today.');
         data = body;
-        render();
+        await addSharedStory();
+        render(sharedId);
       } catch (err) {
         showMessage(err.message, { retry: true });
       }
@@ -348,5 +366,6 @@
     load();
   </script>
   <script src="/install.js" defer></script>
+  <script src="/ping.js" data-app="newsapp" data-version="1" data-endpoint="https://feedback.nocod.dev/api/ping" defer></script>
 </body>
 </html>

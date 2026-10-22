@@ -1,8 +1,8 @@
 // Minimal service worker: makes the app installable and lets it open offline.
 // Pages and code = network-first (a new deploy shows up on the next open), saved copy only when offline; API/data requests = network-first too.
 // Bump CACHE when the shell files change in a way that must not be served stale.
-const CACHE = 'app-v9';
-const SHELL = ['/', '/tags.html', '/sources.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/install.js'];
+const CACHE = 'app-v11';
+const SHELL = ['/', '/brand.css', '/tags.html', '/sources.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/install.js', '/ping.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -38,6 +38,15 @@ onto a canvas as a PNG and hands it, with the headline and article link as text,
 the text, or opens `wa.me` on desktop. The photo is loaded through `GET /api/img?url=...`, a same-origin proxy that
 only serves photos belonging to today's news (otherwise the cross-origin image would taint the canvas).
 
+### Share links
+
+The shared text ends with "Read more and try out the Daily News app: https://…/n/<code>" instead of the publisher's
+link (the card's ↗ button still opens the original story). `<code>` is a 3-character base-36 day number plus the
+story's 12-character id (`storylink.js`), so the server knows which day's saved JSON holds it without a visible date.
+`GET /n/<code>` serves the app with that story's title and photo in the preview tags (so chat apps unfurl it), and the
+page opens on that story, even if it is from an earlier day or its tag is turned off. `GET /api/story/<code>` returns
+the story. Unknown codes just open the app.
+
 ## Install as an app
 
 The ⋮ menu (top-right) has "Install app": on Android Chrome it opens the install prompt; on iPhone Safari it shows
@@ -65,3 +74,9 @@ Deployed as `newsapp` in `asia-south1`, bucket `rajkumar-newsapp`, running as th
 
 - The bucket keeps every day's JSON (no lifecycle rule), so old days remain as an archive.
 - Headlines and photos belong to their publishers; each card links back to the original story.
+
+## Usage ping
+
+`public/ping.js` (copied from `shared/ping/ping.js`) silently tells the `feedback` service once a day that a real person
+used the app: anonymous random device id, platform, installed-or-browser, screen size, and counts of share / open-story
+taps. Nothing is shown to the user. Details in `feedback/README.md`.
